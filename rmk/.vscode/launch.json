@@ -1,0 +1,197 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex-Debug - stm32h7",
+            "preLaunchTask": "flash stm32h7",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/examples/use_rust/stm32h7/target/thumbv7em-none-eabihf/debug/rmk-stm32h7",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "showDevDebugOutput": "parsed",
+            "runToEntryPoint": "main",
+            "configFiles": [
+                "${workspaceFolder}/examples/use_rust/stm32h7/openocd.cfg"
+            ],
+            "svdFile": "${workspaceFolder}/examples/use_rust/stm32h7/STM32H7B0x.svd",
+            "postRestartCommands": [
+                "monitor rtt start",
+            ],
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "clearSearch": false,
+                "polling_interval": 10,
+                "rtt_start_retry": 2000,
+                "decoders": [
+                    {
+                        "label": "RTT channel 0",
+                        "port": 0,
+                        "type": "console"
+                    }
+                ]
+            },
+        },
+        {
+            "name": "Cortex-Debug - rp2040",
+            "type": "cortex-debug",
+            "request": "launch",
+            "gdbPath": "gdb-multiarch",
+            // "preLaunchTask": "flash rp2040",
+            "cwd": "${workspaceFolder}/examples/use_rust/rp2040",
+            "device": "RP2040",
+            "servertype": "openocd",
+            "showDevDebugOutput": "parsed",
+            "executable": "${workspaceFolder}/examples/use_rust/rp2040/target/thumbv6m-none-eabi/debug/rmk-rp2040",
+            "runToEntryPoint": "main",
+            "configFiles": [
+                "openocd.cfg"
+            ]
+        },
+        {
+            "name": "Probe-rs - stm32f4",
+            // "preLaunchTask": "build stm32h7 --debug",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/examples/use_rust/stm32f4",
+            "chip": "STM32F411CEUx",
+            "speed": 24000,
+            "runtimeExecutable": "probe-rs",
+            "runtimeArgs": [
+                "dap-server"
+            ],
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "resetAfterFlashing": true,
+                "haltAfterReset": false,
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "${workspaceFolder}/examples/use_rust/stm32f4/target/thumbv7em-none-eabihf/debug/rmk-stm32f4",
+                    "chip": "STM32F411CEUx",
+                    "svdFile": "${workspaceFolder}/examples/use_rust/stm32f4/STM32F411.svd",
+                    "rttEnabled": true,
+                    "rttChannelFormats": [
+                        {
+                            "channelNumber": 0,
+                            // Format RTT data as String data
+                            "dataFormat": "String",
+                            // Include host-side timestamps for every line of data transferred from the target RTT output
+                            "showTimestamps": true
+                        },
+                        {
+                            "channelNumber": 1,
+                            // Treat data as raw binary data, and do not format in any way
+                            "dataFormat": "BinaryLE"
+                        }
+                    ],
+                    "options": {
+                        "env": {
+                            "DEFMT_LOG": "debug"
+                        }
+                    },
+                }
+            ],
+            "consoleLogLevel": "Debug", //Error, Warn, Info, Debug, Trace
+            "wireProtocol": "Swd",
+            "env": {
+                "RUST_LOG": "debug"
+            }
+        },
+        {
+            "name": "Probe-rs - stm32h7",
+            "preLaunchTask": "build stm32h7 --debug",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/examples/use_rust/stm32h7",
+            "chip": "STM32H7B0VBTx",
+            "speed": 24000,
+            "runtimeExecutable": "probe-rs",
+            "runtimeArgs": [
+                "dap-server"
+            ],
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "resetAfterFlashing": true,
+                "haltAfterReset": false,
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "${workspaceFolder}/examples/use_rust/stm32h7/target/thumbv7em-none-eabihf/debug/rmk-stm32h7",
+                    "chip": "STM32H7B0VBTx",
+                    "svdFile": "${workspaceFolder}/examples/use_rust/stm32h7/STM32H7B0x.svd",
+                    "rttEnabled": true,
+                    "rttChannelFormats": [
+                        {
+                            "channelNumber": 0,
+                            // Format RTT data as String data
+                            "dataFormat": "String",
+                            // Include host-side timestamps for every line of data transferred from the target RTT output
+                            "showTimestamps": true
+                        },
+                        {
+                            "channelNumber": 1,
+                            // Treat data as raw binary data, and do not format in any way
+                            "dataFormat": "BinaryLE"
+                        }
+                    ],
+                    "options": {
+                        "env": {
+                            "DEFMT_LOG": "debug"
+                        }
+                    },
+                }
+            ],
+            "consoleLogLevel": "Debug", //Error, Warn, Info, Debug, Trace
+            "wireProtocol": "Swd",
+            "env": {
+                "RUST_LOG": "debug"
+            }
+        },
+        {
+            "name": "Probe-rs - rp2040",
+            "preLaunchTask": "Build Debug",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/examples/use_rust/rp2040",
+            "chip": "rp2040",
+            // RP2040 doesn't support connectUnderReset
+            "connectUnderReset": false,
+            "speed": 4000,
+            "runtimeExecutable": "probe-rs",
+            "runtimeArgs": [
+                "dap-server"
+            ],
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "resetAfterFlashing": true,
+                "haltAfterReset": true,
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "${workspaceFolder}/examples/use_rust/rp2040/target/thumbv6m-none-eabi/debug/rmk-rp2040",
+                    "chip": "RP2040",
+                    "svdFile": "${workspaceFolder}/examples/use_rust/rp2040/rp2040.svd",
+                    "rttEnabled": true,
+                    "options": {
+                        "env": {
+                            "DEFMT_LOG": "debug"
+                        }
+                    },
+                }
+            ],
+            "consoleLogLevel": "Debug", //Error, Warn, Info, Debug, Trace
+            "wireProtocol": "Swd",
+            "env": {
+                "RUST_LOG": "debug"
+            }
+        }
+    ]
+}

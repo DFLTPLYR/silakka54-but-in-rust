@@ -1,0 +1,58 @@
+#![no_main]
+#![no_std]
+
+#[macro_use]
+mod macros;
+
+use defmt::*;
+use defmt_rtt as _;
+use embassy_executor::Spawner;
+use embassy_rp::bind_interrupts;
+use embassy_rp::gpio::{Input, Output};
+use embassy_rp::peripherals::{UART0, USB};
+use embassy_rp::uart::{self, BufferedUart};
+use embassy_rp::usb::InterruptHandler;
+use panic_probe as _;
+use rmk::debounce::default_debouncer::DefaultDebouncer;
+use rmk::futures::future::join;
+use rmk::matrix::Matrix;
+use rmk::run_all;
+use rmk::split::SPLIT_MESSAGE_MAX_SIZE;
+use rmk::split::peripheral::run_rmk_split_peripheral;
+use rmk::watchdog::Rp2040Watchdog;
+use static_cell::StaticCell;
+
+bind_interrupts!(struct Irqs {
+    USBCTRL_IRQ => InterruptHandler<USB>;
+    UART0_IRQ => uart::BufferedInterruptHandler<UART0>;
+});
+
+#[embassy_executor::main]
+async fn main(_spawner: Spawner) {
+    info!("RMK start!");
+    // Initialize peripherals
+    let p = embassy_rp::init(Default::default());
+
+    // Pin config: row (input) pins same, column (output) pins REVERSED
+    // Physical col 5 (GP12) → logical col 0, physical col 0 (GP7) → logical col 5
+    let (row_pins, col_pins) = config_matrix_pins_rp!(peripherals: p, input: [PIN_2, PIN_3, PIN_4, PIN_5, PIN_6], output: [PIN_12, PIN_11, PIN_10, PIN_9, PIN_8, PIN_7]);
+
+    static TX_BUF: StaticCell<[u8; SPLIT_MESSAGE_MAX_SIZE]> = StaticCell::new();
+    let tx_buf = &mut TX_BUF.init([0; SPLIT_MESSAGE_MAX_SIZE])[..];
+    static RX_BUF: StaticCell<[u8; SPLIT_MESSAGE_MAX_SIZE]> = StaticCell::new();
+    let rx_buf = &mut RX_BUF.init([0; SPLIT_MESSAGE_MAX_SIZE])[..];
+    let uart_instance = BufferedUart::new(p.UART0, p.PIN_0, p.PIN_1, Irqs, tx_buf, rx_buf, uart::Config::default());
+
+    // Define the matrix
+    let debouncer = DefaultDebouncer::new();
+    let mut matrix = Matrix::<_, _, _, 5, 6, true>::new(row_pins, col_pins, debouncer);
+
+    let mut watchdog_runner = Rp2040Watchdog::default_runner(embassy_rp::watchdog::Watchdog::new(p.WATCHDOG));
+
+    // Start
+    join(
+        run_all!(matrix, watchdog_runner),
+        run_rmk_split_peripheral(uart_instance),
+    )
+    .await;
+}

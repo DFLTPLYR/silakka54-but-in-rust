@@ -1,0 +1,177 @@
+# Layout
+
+## Keyboard layout configuration
+
+`[matrix]` defines the physical key matrix on your board, while `[layout]` section contains the layout and the default keymap for the keyboard:
+
+```toml
+[layout]
+rows = 5
+cols = 4
+layers = 3
+matrix_map = """
+    ... the mapping between the "electronic matrix" of your keyboard
+        and your key map configuration is described here ...
+"""
+```
+
+The `matrix_map` is a string built from `(row, col, <hand>)` tuples, listed in the same order as you want to define your keys in your key map.
+
+The `(row, col)` coordinates are using zero based indexing and referring to the position in the "electronic matrix" of your keyboard. As you can see in [matrix configuration](./keyboard_matrix#matrix-configuration), even the direct pin based keyboards are represented with a matrix. In case of split keyboards, the positions refer to the position in the "big unified matrix" of all split parts.
+With the help of this matrix map, the configuration of non-regular key matrices can be intuitively arranged in your key maps. (Triple quote mark `"""` is used to limit multi-line strings)
+
+The `<hand>` is optional, it should only be used when `unilateral_tap = true`. By assigning `L` or `R` to `<hand>`, each key can be associated with either the left or right hand. If the `<hand>` is set to `*` it will be considered a "bilateral" key, meaning that in `unilateral_tap = true` it will be treated as opposite hand regardless of on which hand modifier was pressed.
+
+```toml
+# simple numpad example:
+# ┌───┬───┬───┬───┐
+# │NUM│ / │ * │ - │ <-- row 0, col 0..4
+# ├───┼───┼───┼───┤
+# │ 7 │ 8 │ 9 │   │
+# ├───┼───┼───┤ + │
+# │ 4 │ 5 │ 6 │   │
+# ├───┼───┼───┼───┤
+# │ 1 │ 2 │ 3 │ E │
+# ├───┴───┼───┤ N │
+# │   0   │ . │ T │
+# └───────┴───┴───┘
+[layout]
+rows = 5
+cols = 4
+layers = 3
+matrix_map = """
+(0,0) (0,1) (0,2) (0,3)
+(1,0) (1,1) (1,2) (1,3)
+(2,0) (2,1) (2,2)
+(3,0) (3,1) (3,2) (3,3)
+   (4,0)      (4,1)
+"""
+
+# split ortho example for matrix map, with L/R hand information filled
+[layout]
+rows = 4
+cols = 10
+layers = 3
+matrix_map = """
+(0, 0, L)  (0, 1, L)  (0, 2, L)  (0, 3, L)  (0, 4, L)    (0, 5, R)  (0, 6, R)  (0, 7, R)  (0, 8, R)  (0, 9, R)
+(1, 0, L)  (1, 1, L)  (1, 2, L)  (1, 3, L)  (1, 4, L)    (1, 5, R)  (1, 6, R)  (1, 7, R)  (1, 8, R)  (1, 9, R)
+(2, 0, L)  (2, 1, L)  (2, 2, L)  (2, 3, L)  (2, 4, L)    (2, 5, R)  (2, 6, R)  (2, 7, R)  (2, 8, R)  (2, 9, R)
+                                 (3, 3, L)  (3, 4, L)    (3, 5, R)  (3, 6, R)
+"""
+```
+
+Once the layout is defined, the key mapping can be described for each layer:
+
+```toml
+# layer 0 (default):
+[[layer]]
+name = "base_layer" #optional name for the layer
+keys = """
+NumLock KpSlash KpAsterisk KpMinus
+Kp7     Kp8     Kp9        KpPlus
+Kp4     Kp5     Kp6
+Kp1     Kp2     Kp3        Enter
+    Kp0         KpDot
+"""
+
+# layer 1:
+[[layer]]
+name = "mouse_navigation" #optional name for the layer
+keys = """
+TO(base_layer)   @my_cut    @my_copy         @my_paste
+MouseBtn1        MouseUp    MouseBtn2        MouseWheelUp
+MouseLeft        MouseBtn4  MouseRight
+MouseWheelLeft   MouseDown  MouseWheelRight  MouseWheelDown
+       MouseBtn1            MouseBtn2
+"""
+```
+
+The number and order of entries on each defined layer must be identical with the number and order of entries in `matrix_map`. White spaces and line breaks are free to vary, but it's worth keeping a consistent arrangement with the real keyboard.
+
+::: warning
+
+If the number of defined layers is smaller than what was defined in `layout.layers`, RMK will fill empty layers automatically (so you can configure them freely in Vial). But the empty layers still consume flash and RAM, so if you don't have enough space for them, it's not recommended to use a big layer count.
+
+:::
+
+In each `layer.keys`, the keys are bound to various key actions. Due to the limitation of the `toml` file format, this is done in a string. RMK parses the string and fills in the actual keymap initializer, like what's in [`keymap.rs`](https://github.com/HaoboGu/rmk/tree/main/examples/use_rust/rp2040/src/keymap.rs)
+
+The `layer.keys` string should follow several rules:
+
+1. For a simple keycode (i.e., keys in RMK's [`HidKeyCode`](https://docs.rs/rmk/latest/rmk/keycode/enum.HidKeyCode.html) enum), just fill in its name.
+
+   For example, if you set a keycode `Backspace`, it will be turned to the corresponding HID keycode. So you have to ensure that the keycode string is valid, or RMK wouldn't compile! However, to make things easier a number of alternative key names (see alias column in [KeyCode table](./keymap_configuration/keycodes)) were added and also case-insensitive search is used to find the valid keycode.
+
+   For simple keycodes with modifiers active, you can use `WM(key, modifier)` to create a keypress with modifier action. Modifiers can be chained together like `LShift | RGui` to have multiple modifiers active.
+
+   You may use aliases, prefixed with `@`, like `@my_copy` in the above example. The alias names are case sensitive. The definition of aliases is described below.
+
+   You may use layer names instead of layer numbers, like `TO(base_layer)` in the above example.
+   ::: warning
+
+   Please note that layer name if used like this, may not contain white spaces and may not be a number. Layer names are case sensitive.
+
+   :::
+
+2. For no-key (`KeyAction::No`), use `No`
+
+3. For transparent key (`KeyAction::Transparent`), use `_` or `__` (you can put any number of `_`)
+
+4. RMK supports many advanced layer operations:
+   1. Use `DF(n)` to create a switch default layer action, `n` is the layer number. Use `PDF(n)` for a persistent version that is saved to storage and restored after reboot
+   2. Use `MO(n)` to create a layer activate action, `n` is the layer number
+   3. Use `LM(n, modifier)` to create layer activate with modifier action. The modifier can be chained in the same way as `WM`
+   4. Use `LT(n, key, <profile_name>)` to create a layer activate action or tap key(tap/hold). The `key` here is the RMK [`KeyCode`](https://docs.rs/rmk/latest/rmk/keycode/enum.KeyCode.html), The `profile_name` is optional, which defines the key's [profile](./behavior#per-key-profiles-for-morse-tapdance-tap-hold-fine-tuning)
+   5. Use `OSL(n)` to create a one-shot layer action, `n` is the layer number
+   6. Use `OSM(modifier)` to create a one-shot modifier action. The modifier can be chained in the same way as `WM`
+   7. Use `TT(n)` to create a layer activate or tap toggle action, `n` is the layer number
+   8. Use `TG(n)` to create a layer toggle action, `n` is the layer number
+   9. Use `TO(n)` to create a layer toggle only action (activate layer `n` and deactivate all other layers), `n` is the layer number
+
+The definitions of these operations are the same as QMK's; you can find them [here](https://docs.qmk.fm/#/feature_layers). If you want other actions, please [file an issue](https://github.com/HaoboGu/rmk/issues/new).
+
+5. For modifier-tap-hold, use `MT(key, modifier, <profile_name>)` where the modifier can be a chain like explained on point 1. The `profile_name` is optional, which defines the key's [profile](./behavior#per-key-profiles-for-morse-tapdance-tap-hold-fine-tuning)
+<!-- If you're using home-row mod(HRM), you can also use `HRM(key, modifier)` to create a modifier-tap-hold whose configuration is optimized for home-row mod. -->
+
+6. For generic key tap-hold, use `TH(key-tap, key-hold, <profile_name>)`, The `profile_name` is optional, which defines the key's [profile](./behavior#per-key-profiles-for-morse-tapdance-tap-hold-fine-tuning)
+
+   The tap/hold slots of `MT`, `TH` and `LT` are not limited to plain keycodes — they accept any single action, so you can nest other actions inside them. For example `MT(WM(P, RAlt), LShift, HRM)` taps `RAlt+P` and holds `LShift` with the `HRM` profile, and `TH(WM(A, LShift), MO(2))` taps `Shift+A` and holds momentary-layer 2. Composite tap-hold/morse forms (`MT`/`TH`/`LT`/`TT`/`TD`) cannot be nested inside a slot.
+
+7. For shifted key, use `SHIFTED(key)`
+
+8. For Morse/Tap Dance, use `TD(n)` or `Morse(n)`, they are same
+
+9. For keyboard macros, use `Macro(n)`
+
+## Aliases
+
+The `[aliases]` section contains a table of user defined names and an associated replacement string, which can be used in the `layer.keys`:
+
+```toml
+# here are the aliases for the example above
+[aliases]
+my_cut = "WM(X, LCtrl)"
+my_copy = "WM(C, LCtrl)"
+my_paste = "WM(V, LCtrl)"
+```
+
+::: warning
+
+Please note that alias names may not contain white spaces and they are case sensitive.
+
+:::
+
+## Assigning the left/right hand to a position
+
+# default profile for morse, tap dance and tap-hold keys:
+
+[behavior.morse]
+enable_flow_tap = true,
+prior_idle_time = "120ms"
+hold_on_other_press = true
+hold_timeout = "250ms"
+gap_timeout = "250ms"
+
+```
+
+```

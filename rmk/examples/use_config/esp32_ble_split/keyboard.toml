@@ -1,0 +1,71 @@
+[keyboard]
+name = "RMK Keyboard"
+product_name = "RMK Keyboard"
+vendor_id = 0x4c4b
+product_id = 0x4643
+manufacturer = "haobo"
+chip = "esp32c3"
+usb_enable = false
+
+
+# RMK uses col2row as the default matrix diode direction, if you want to use a row2col matrix, add `row2col = true`
+# row2col = true
+
+[layout]
+rows = 4
+cols = 3
+layers = 2
+keymap = [
+    [
+        ["A", "B", "C"],
+        ["Kc1", "Kc2", "Kc3"],
+        ["LCtrl", "MO(1)", "LShift"],
+        ["OSL(1)", "LT(2, Kc9)", "LM(1, LShift | LGui)"]
+    ],
+    [
+        ["_", "TT(1)", "TG(2)"],
+        ["_", "_", "_"],
+        ["_", "_", "_"],
+        ["_", "_", "_"]
+    ],
+]
+
+# Storage feature is enabled by default
+[storage]
+enabled = true
+
+[ble]
+enabled = true
+
+
+[split]
+connection = "ble"
+
+[split.central]
+rows = 2
+cols = 2
+row_offset = 0
+col_offset = 0
+ble_addr = [0x18, 0xe2, 0x21, 0x80, 0xc0, 0xc7]
+
+[split.central.matrix]
+matrix_type = "normal"
+# RMK uses col2row as the default matrix diode direction, if you want to use a row2col matrix, add `row2col = true`
+# row2col = true
+row_pins = ["GPIO6", "GPIO7"]
+col_pins = ["GPIO3", "GPIO4"]
+
+[[split.peripheral]]
+rows = 2
+cols = 1
+row_offset = 2
+col_offset = 2
+ble_addr = [0x7e, 0xfe, 0x73, 0x9e, 0x66, 0xe3]
+[split.peripheral.matrix]
+matrix_type = "normal"
+row_pins = ["GPIO6", "GPIO7"]
+col_pins = ["GPIO3"]
+
+[dependency]
+# Whether to enable defmt, set to false for reducing binary size
+defmt_log = false

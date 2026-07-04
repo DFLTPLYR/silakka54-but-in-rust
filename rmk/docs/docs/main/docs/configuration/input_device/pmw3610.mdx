@@ -1,0 +1,169 @@
+# PMW3610 Optical Mouse Sensor
+
+PMW3610 is a low‑power optical mouse sensor.
+
+::: note
+
+- Currently, only implemented for nRF52 and RP2040 with a single-wire (SDIO) half-duplex SPI.
+- Set `motion` pin for better power efficiency. If omitted, the sensor is polled.
+- By default, report rate is limited to 125 Hz to prevent flooding the event channel, which causes latency issues especially over BLE.
+
+:::
+
+## `toml` configuration
+
+::: warning
+
+`spi.mosi` and `spi.miso` must be the same pin, or one of them empty.
+
+:::
+
+```toml
+[[input_device.pmw3610]]
+name = "trackball0"
+id = 0 # optional number between 0-255. Ids are used for debug prints. Set to 0 if omitted.
+
+spi.instance = "bitbang0"
+spi.sck = "P0_05"
+spi.mosi = "P0_04"
+spi.miso = "P0_04"
+spi.cs = "P0_09"
+# or spi = { instance = "bitbang0", sck = "P0_05", mosi = "P0_04", miso = "P0_04", cs = "P0_09" }
+
+motion = "P0_02" # Optional. If omitted, the sensor is polled.
+
+report_hz = 125 # Optional: Report rate in Hz
+
+force_awake = false
+smart_mode = true
+cpi = 800
+# invert / swap axis on a sensor level
+invert_x = true
+# invert_y = true
+# swap_xy = true
+# invert / swap axis in software (in PointingProcessor)
+# proc_invert_x = true
+# proc_invert_y = true
+# proc_swap_xy = true
+
+```
+
+### Split
+
+To add the sensor to the central or peripheral use
+
+```toml
+[[split.central.input_device.pmw3610]]
+name = ...
+
+# resp.
+[[split.peripheral.input_device.pmw3610]]
+name = ...
+```
+
+::: warning Multi-device ID assignment
+
+`PointingEvent` carries a `device_id` so that each `PointingProcessor` can be paired
+with a specific sensor. If you have sensors on both halves of a split keyboard,
+assign distinct ids to avoid the central treating them as the same device:
+
+```toml
+# Central side sensor
+[[split.central.input_device.pmw3610]]
+id = 0
+
+# Peripheral side sensor
+[[split.peripheral.input_device.pmw3610]]
+id = 1
+```
+
+The peripheral forwards events to the central with the `device_id` preserved.
+The generated `PointingProcessorConfig` on the central will automatically use the
+matching `device_id` for each sensor.
+
+:::
+
+::: warning Breaking change
+
+Adding `device_id` to `PointingEvent` changes the serialized binary format used by the
+split protocol. Both halves of a split keyboard **must** be flashed with the same
+firmware version at the same time.
+
+:::
+
+## Rust configuration
+
+Define a `PointingDevice` and add it to `run_all!` macro.
+For a split keyboard this must be added to the file (`central.rs` or `peripheral.rs`) corresponding to the side the sensor is connected to.
+
+```rust
+use embassy_rp::gpio::{Output, Flex, Level};
+use rmk::input_device::pmw3610::{BitBangSpiBus, Pmw3610, Pmw3610Config};
+use rmk::input_device::pointing::PointingDevice;
+
+let pmw3610_config = Pmw3610Config {
+    res_cpi: 800,
+    // force_awake: true,
+    smart_mode: true,
+    swap_xy: true,
+    // invert_x: true,
+    // invert_y: true,
+    ..Default::default()
+};
+
+let pmw3610_sck = Output::new(p.P0_05, Level::High, OutputDrive::Standard);
+let pmw3610_sdio = Flex::new(p.P0_04);
+let pmw3610_cs = Output::new(p.P0_09, Level::High, OutputDrive::Standard);
+let pmw3610_motion = Some(Input::new(p.P0_02, Pull::Up));
+// or if you want to omit the motion pin:
+// let pmw3610_motion = Option::<Input<'static>>::None;
+
+let pmw3610_spi = BitBangSpiBus::new(pmw3610_sck, pmw3610_sdio);
+
+const POINTING_DEV_ID: u8 = 0; // this ID can be anything from 0-255. Just make sure you don't use the same number twice for different sensors to avoid confusion.
+let mut pmw3610_device = PointingDevice::<Pmw3610<_, _, _>>::new(
+    POINTING_DEV_ID
+    pmw3610_spi,
+    pmw3610_cs,
+    pmw3610_motion,
+    pmw3610_config,
+);
+
+// If you want to customize the report rate (Hz):
+// let mut pmw3610_device = Pmw3610Device::with_report_hz(
+//     POINTING_DEV_ID,
+//     pmw3610_spi,
+//     pmw3610_cs,
+//     pmw3610_motion,
+//     pmw3610_config,
+//     125,
+// );
+
+run_all!(matrix, pmw3610_device),
+```
+
+And define a `PointingProcessor` and add it to `run_all!` macro to process the events.
+
+::: warning
+
+This should be added to the `central.rs`-File even if the sensor is on split peripheral.
+
+:::
+
+```rust
+    use rmk::input_device::pointing::{ PointingProcessor, PointingProcessorConfig };
+
+    let pmw3610_proc_config = PointingProcessorConfig {
+        // invert_x: true, // invert axis if neccesary
+        // invert_y: true,
+        // swap_y: true,
+        ..Default::default()
+    };
+
+    let mut pmw3360_processor = PointingProcessor::new(&keymap, pmw3610_proc_config);
+
+run_all!(pmw3610_processor, /* other processors and devices */)
+```
+
+## Pointing Modes
+The PointingProcessor has four modes (Cursor, Scroll, Sniper, Caret) with per‑layer configuration. See the [PointingProcessor](./pointing_processor) page for all options.

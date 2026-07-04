@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+@plugin "@iconify/tailwind4";
+
+:root {
+  --rp-c-brand-darker: #ff6900;
+  --rp-c-brand-dark: #ff8904;
+  --rp-c-brand: #ffb900;
+  --rp-c-brand-light: #ffb86a;
+  --rp-c-brand-lighter: #ffd6a7;
+}

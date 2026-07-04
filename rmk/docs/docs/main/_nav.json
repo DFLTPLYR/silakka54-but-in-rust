@@ -1,0 +1,16 @@
+[
+  {
+    "text": "Guide",
+    "link": "/docs/user_guide/guide_overview",
+    "activeMatch": "/docs/user_guide/"
+  },
+  {
+    "text": "Documentation",
+    "link": "/docs/getting_started/introduction",
+    "activeMatch": "/docs/(?!user_guide/)[^/]+"
+  },
+  {
+    "text": "API doc",
+    "link": "https://docs.rs/rmk/latest/rmk/"
+  }
+]
