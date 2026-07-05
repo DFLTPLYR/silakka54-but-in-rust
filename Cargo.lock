@@ -2015,7 +2015,6 @@ name = "rmk"
 version = "0.8.2"
 dependencies = [
  "bt-hci",
- "byteorder",
  "cortex-m",
  "crc32fast",
  "defmt 1.0.1",
